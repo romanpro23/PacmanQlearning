@@ -43,7 +43,7 @@ class GameRenderer:
         self._max_score = 0
         self.fps = 60
 
-        self.cur_state = None
+        self.pre_state = None
         self.action = None
         self.pre_score = 10
         self.training = True
@@ -163,7 +163,7 @@ class GameRenderer:
         if self.training:
             reward = -100
             self.pre_score = self._score
-            self.agent.update(self.cur_state, self.action, reward, self.cur_state, True)
+            self.agent.update(self.pre_state, self.action, reward, self.pre_state, True)
 
         self._lives -= 1
         self._hero.set_position(24, 24)
@@ -213,23 +213,32 @@ class GameRenderer:
             if state is None:
                 return
 
-            if(self.cur_state is not None and self.training):
+            if(self.pre_state is not None and self.training):
+                # if self.action == 0 and self.pre_state[16] == 1:
+                #     reward = -1
+                # elif self.action == 1 and self.pre_state[0] == 1:
+                #     reward = -1
+                # elif self.action == 2 and self.pre_state[8] == 1:
+                #     reward = -1
+                # elif self.action == 3 and self.pre_state[24] == 1:
+                #     reward = -1
+                # else:
                 reward = self._score - self.pre_score
                 self.pre_score = self._score
-                self.agent.update(self.cur_state, self.action, reward, state, False)
+                self.agent.update(self.pre_state, self.action, reward, state, False)
                 self.agent.train()
 
-            self.cur_state = state
+            self.pre_state = state
 
         pressed = pygame.key.get_pressed()
         if pressed[pygame.K_q]:
             self.ai_control = not self.ai_control
         elif pressed[pygame.K_1]:
-            self.agent.brain.load("agent2000.pth")
+            self.agent.brain.load("agent500.pth")
             self.agent.brain.epsilon = 0.2
             print("Loading a model that earns 500 score")
         elif pressed[pygame.K_2]:
-            self.agent.brain.load("agent2000.pth")
+            self.agent.brain.load("agent1000.pth")
             self.agent.brain.epsilon = 0.1
             print("Loading a model that earns 1000 score")
         elif pressed[pygame.K_3]:
@@ -237,7 +246,7 @@ class GameRenderer:
             self.agent.brain.epsilon = 0.05
             print("Loading a model that earns 2000 score")
         elif pressed[pygame.K_4]:
-            self.agent.brain.load("agent2000.pth")
+            self.agent.brain.load("agent2500.pth")
             self.agent.brain.epsilon = self.agent.brain.epsilon_min
             print("Loading a model that earns 2500 score")
         elif pressed[pygame.K_0]:
@@ -367,6 +376,11 @@ class GameRenderer:
         up_near_cook = 1 if self._map[y-1][x] == 1 and (x, y-1) in cookie_positions else 0
         down_near_cook = 1 if self._map[y+1][x] == 1 and (x, y+1) in cookie_positions else 0
 
+        left_near_ghost = 1 if self._map[y][x-1] == 1 and (x-1, y) in ghost_positions else 0
+        right_near_ghost = 1 if self._map[y][x+1] == 1 and (x+1, y) in ghost_positions else 0
+        up_near_ghost = 1 if self._map[y-1][x] == 1 and (x, y-1) in ghost_positions else 0
+        down_near_ghost = 1 if self._map[y+1][x] == 1 and (x, y+1) in ghost_positions else 0
+
         # print(left_near_cook, right_near_cook, up_near_cook, down_near_cook)
         dis = [math.sqrt((cookie[1] - y)**2 + (cookie[0] - x)**2) for cookie in cookie_positions]
         cook_x, cook_y = cookie_positions[dis.index(min(dis))] if len(dis) > 0 else (-1, -1)
@@ -381,6 +395,13 @@ class GameRenderer:
         ghost_pos = [[1 if ghost[0] < x else 0, 1 if ghost[0] > x else 0, 1 if ghost[1] < y else 0, 1 if ghost[1] > y else 0]
                      for ghost in ghost_positions]
         ghost_pos = [element for row in ghost_pos for element in row]
+
+        ghost_dir = [[1 if ghost.current_direction == Direction.LEFT else 0,
+                      1 if ghost.current_direction == Direction.RIGHT else 0,
+                      1 if ghost.current_direction == Direction.UP else 0,
+                      1 if ghost.current_direction == Direction.DOWN else 0]
+                    for ghost in self._ghosts]
+        ghost_dir = [element for dir in ghost_dir for element in dir]
         # print(ghost_pos)
 
         state = [
@@ -391,6 +412,7 @@ class GameRenderer:
             left_dir,
             left_near_cook,
             left_pos_cook,
+            left_near_ghost,
             right_wall,
             right_cook,
             right_ghost,
@@ -398,6 +420,7 @@ class GameRenderer:
             right_dir,
             right_near_cook,
             right_pos_cook,
+            right_near_ghost,
             up_wall,
             up_cook,
             up_ghost,
@@ -405,6 +428,7 @@ class GameRenderer:
             up_dir,
             up_near_cook,
             up_pos_cook,
+            up_near_ghost,
             down_wall,
             down_cook,
             down_ghost,
@@ -412,7 +436,9 @@ class GameRenderer:
             down_dir,
             down_near_cook,
             down_pos_cook,
-            *(ghost_pos)
+            down_near_ghost,
+            *(ghost_pos),
+            *(ghost_dir)
         ]
 
         return state

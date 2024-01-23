@@ -12,7 +12,7 @@ class Agent:
                  epsilon_min=0.01,
                  epsilon_decay=0.99
                  ):
-        self.brain = Brain(model=LinearModel(44, [128, 64], action_size),
+        self.brain = Brain(model=LinearModel(64, [256, 128, 64], action_size),
                            memory_size=memory_size,
                            action_size=action_size,
                            gamma=gamma,

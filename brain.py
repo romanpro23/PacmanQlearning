@@ -46,7 +46,7 @@ class Brain:
         next_states = torch.tensor(np.array([tup[3] for tup in batch]), dtype=torch.float32)
         done = torch.tensor(np.array([tup[4] for tup in batch]), dtype=torch.bool)
 
-        target = rewards + done * self.gamma * torch.max(self.model(next_states), dim=1).values
+        target = rewards + self.gamma * torch.max(self.model(next_states), dim=1).values
         target[done] = rewards[done]
 
         prediction = self.model(states)
